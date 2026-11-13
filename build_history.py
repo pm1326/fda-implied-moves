@@ -120,6 +120,13 @@ def main():
     events += [{"date": c["date"], "sponsor": c["sponsor"], "drug": "", "outcome": "rejected",
                 "new_molecule": "", "priority_review": ""} for c in crls]
 
+    # How many products did each company already have approved? None = this decision is make-or-break.
+    earlier = {}
+    for a in json.load(open(os.path.join(RAW, "all_approvals.json"))):
+        t = ticker_for(a["sponsor"])
+        if t:
+            earlier.setdefault(t, []).append(datetime.strptime(a["date"], "%Y%m%d").strftime("%Y-%m-%d"))
+
     rows, seen, skipped = [], set(), 0
     for e in sorted(events, key=lambda e: e["date"]):
         t = ticker_for(e["sponsor"])
@@ -135,8 +142,10 @@ def main():
         if m is None:
             skipped += 1
             continue
+        prior = sum(1 for d in earlier.get(t, []) if d < e["date"])
         rows.append({"date": e["date"], "ticker": t, "sponsor": e["sponsor"], "drug": e["drug"], "outcome": e["outcome"],
-                     "new_molecule": e["new_molecule"], "priority_review": e["priority_review"], **m})
+                     "new_molecule": e["new_molecule"], "priority_review": e["priority_review"],
+                     "prior_products": prior, "dependence": "high" if prior == 0 else "low", **m})
 
     hist = pd.DataFrame(rows)
     hist.to_csv(os.path.join(HERE, "data", "history.csv"), index=False)
@@ -145,10 +154,13 @@ def main():
     model = {"built": datetime.now().strftime("%Y-%m-%d"), "events": len(hist), "groups": {}}
     hist["abs_move"] = hist["move_pct"].abs()
     for outcome in ["approved", "rejected"]:
-        for size in ["small", "mid", "large", "all"]:
+        for size in ["small", "mid", "large", "all", "small/high", "small/low", "mid/high", "mid/low", "all/high", "all/low"]:
             g = hist[hist["outcome"] == outcome]
-            if size != "all":
-                g = g[g["size"] == size]
+            sz, _, dep = size.partition("/")
+            if sz != "all":
+                g = g[g["size"] == sz]
+            if dep:
+                g = g[g["dependence"] == dep]
             if len(g):
                 model["groups"][f"{outcome}/{size}"] = {
                     "n": int(len(g)), "mean_abs_move_pct": round(g["abs_move"].mean(), 2),

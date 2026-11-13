@@ -90,9 +90,60 @@ Selling a straddle there would be betting against a huge move on a coin flip. Th
 
 **Lesson:** the model treats "small company" as one group. What matters is how much of the company rides on this single decision.
 
+## Version 3: how much does the company depend on this drug? (13 November 2026)
+
+**The problem.** The Capricor run showed the model could not tell a make-or-break decision from a minor one.
+
+**The fix.** The FDA's database lists every approval ever, so for each past decision I counted how many products the company already had approved. None means high dependence; one or more means low.
+
+**What it showed**
+
+| Outcome | Company | Decisions | Average size of move | Average direction |
+|---|---|---|---|---|
+| Rejected | Small, no other product | 28 | 35.5% | -32.5% |
+| Rejected | Small, has other products | 11 | 10.5% | +2.5% |
+| Approved | Small, no other product | 34 | 15.0% | +4.6% |
+| Approved | Small, has other products | 39 | 12.3% | +5.2% |
+| Approved | Any size, no other product | 59 | 12.4% | +4.8% |
+| Approved | Any size, has other products | 331 | 4.0% | +1.4% |
+
+This is the clearest result so far. A rejection costs a one-product small company about a third of its value on average. For a small company that already sells drugs, a rejection barely registers.
+
+**What changed in the tool**
+
+- New `--dependence high|low` input. The forecast now uses past decisions of the same size and the same dependence, and prints which group it used.
+- `trade` now refuses to save when option quotes are stale, unless forced.
+- New `positions` command for open paper trades.
+- `summary` is now a scorecard: for each finished decision it shows my forecast, the market's forecast and the actual move, and counts which was closer.
+
+**Research on the four upcoming decisions** (full notes in `research/2026-11-decisions.md`)
+
+| Company | What is at stake |
+|---|---|
+| Capricor | Make or break. Rejected once before, and an advisory panel voted 9 to 3 against in July 2026. |
+| Savara | Make or break. Its only product, and about $150m of financing depends on approval. |
+| BridgeBio | Minor to moderate. It already sells Attruby and has two other launches. |
+| Cogent | Major but spread out. First product, with three separate decisions on the same drug. |
+
+**Re-run with dependence and researched odds**
+
+| Company | Approval odds used | Expected move before | Expected move now | Implied move | Verdict |
+|---|---|---|---|---|---|
+| Capricor | 35% | 33% | 49% | 98% | Sell |
+| Savara | 80% | 18% | 19% | 45% | Sell |
+| BridgeBio | 85% | 10% | 10% | 12% | No trade |
+| Cogent | 85% | 14% | 15% | 19% | Sell |
+
+**Problems still open**
+
+1. **The model still says sell on Capricor.** Its forecast rose from 33% to 49%, but options imply about 98%. I do not trust the sell. A drug with a negative panel vote and a prior rejection is more extreme than the average one-product company, and my data cannot see that.
+2. **"High dependence" is too coarse.** Capricor and Cogent are both "high", but Cogent has three chances with the same drug.
+3. **Option quotes were still flagged as stale** minutes after the US market opened. Free quotes are delayed by about 15 minutes and sometimes come without a bid or ask. I need to check whether they are ever reliable for small companies.
+4. **Counting earlier products depends on my ticker table.** A company approved under a different name would be miscounted.
+
 ## Improvements identified
 
-1. **Add a measure of dependence on the drug.** For example: is this the company's first product, how many drugs does it sell, has this drug been rejected before? Then split the history by it.
+1. ~~Add a measure of dependence on the drug.~~ Done in version 3. Next: refine it with whether the drug was rejected before and whether an advisory panel voted, since those are what made Capricor extreme.
 2. **Separate first approvals from follow-ons.** The data already flags new molecules and priority reviews. A new use for an existing drug matters far less.
 3. **Only save trades during US market hours**, and refuse when quotes are stale.
 4. **Record the worst case, not just the average.** Report the largest single loss beside the win rate.
@@ -117,3 +168,5 @@ Selling a straddle there would be betting against a huge move on a coin flip. Th
 | 13 Nov 2026 | Version 1 built and published: implied move from the straddle. |
 | 13 Nov 2026 | Version 2: FDA history of 488 decisions, expected-move model, paper trading. |
 | 13 Nov 2026 | First run on four upcoming decisions. Found the single-drug dependence weakness. |
+| 13 Nov 2026 | Version 3: dependence measure, positions, scorecard, stale-quote guard. Researched what is at stake for the four decisions. |
+| 13 Nov 2026 | Reminder set for 20 Nov, the last trading day before the Capricor and Savara decisions. |

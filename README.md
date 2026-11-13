@@ -33,6 +33,15 @@ Current dataset: **488 decisions across 123 companies** (`data/history.csv`).
 | Rejected | Mid | 33 | 8.5% | -4.4% | -43.8% | +14.7% |
 | Rejected | Large | 26 | 2.1% | -1.2% | -10.8% | +5.0% |
 
+**How much the company depends on the drug matters most.** Using the FDA's full approval record, each decision is tagged by whether the company already had an approved product:
+
+| Outcome | Company | Decisions | Average size of move | Average direction |
+|---|---|---|---|---|
+| Rejected | Small, no other product | 28 | 35.5% | -32.5% |
+| Rejected | Small, has other products | 11 | 10.5% | +2.5% |
+| Approved | Small, no other product | 34 | 15.0% | +4.6% |
+| Approved | Small, has other products | 39 | 12.3% | +5.2% |
+
 Each move is also stored as a **multiple** of the share's normal daily movement in the 60 trading days before the decision. A small company's rejection is on average about 6 normal days' worth of movement in one day.
 
 ## How the expected move is calculated
@@ -53,11 +62,14 @@ python fetch_fda.py        # download FDA decisions
 python build_history.py    # measure past moves and build the model
 
 python implied_move.py model
-python implied_move.py signal  TICKER 2026-12-15 --p-approve 0.7
-python implied_move.py trade   TICKER 2026-12-15 --p-approve 0.7 --drug "name" --note "why"
+python implied_move.py signal  TICKER 2026-12-15 --p-approve 0.7 --dependence high
+python implied_move.py trade   TICKER 2026-12-15 --p-approve 0.7 --dependence high --drug "name" --note "why"
+python implied_move.py positions
 python implied_move.py outcome TICKER 2026-12-15 --note "approved"
 python implied_move.py summary
 ```
+
+`--dependence high` means the company has no other approved product; `low` means it already sells drugs. `summary` shows open positions and a scorecard of whether my forecast or the market's was closer on each finished decision. Research notes on upcoming decisions are in `research/`, and the development history is in `JOURNAL.md`.
 
 Paper trades are saved in `trades.csv`. A seller enters at the bid and exits at the ask, and a buyer the reverse, so trading costs are included.
 

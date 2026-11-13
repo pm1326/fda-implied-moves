@@ -41,7 +41,7 @@ TRADES = os.path.join(HERE, "trades.csv")
 MODEL = os.path.join(HERE, "data", "model.json")
 COLUMNS = [
     "logged_at", "ticker", "drug", "event_date", "p_approve", "my_note",
-    "share_price", "daily_vol_pct", "size", "expiry", "strike",
+    "share_price", "daily_vol_pct", "size", "dependence", "expiry", "strike",
     "implied_move_pct", "expected_move_pct", "ratio", "decision", "entry_price", "wide_spread",
     "close_before", "close_after", "actual_move_pct", "exit_price", "pnl_per_contract", "outcome_note",
 ]
@@ -60,12 +60,19 @@ def load_model():
     return json.load(open(MODEL))
 
 
-def multiple_for(model, outcome, size):
-    """How many normal days' worth of movement past decisions produced, for this outcome and size."""
-    g = model["groups"].get(f"{outcome}/{size}")
-    if g is None or g["n"] < MIN_GROUP:
-        g = model["groups"][f"{outcome}/all"]
-    return g["mean_multiple"], g["n"]
+def multiple_for(model, outcome, size, dependence="unknown"):
+    """How many normal days' worth of movement past decisions produced.
+    Uses the most specific group of similar past decisions that has enough examples:
+    same size and same dependence on the drug first, then wider groups."""
+    tries = [f"{outcome}/{size}", f"{outcome}/all"]
+    if dependence in ("high", "low"):
+        tries = [f"{outcome}/{size}/{dependence}"] + ([] if size == "large" else [f"{outcome}/all/{dependence}"]) + tries
+    for key in tries:
+        g = model["groups"].get(key)
+        if g and g["n"] >= MIN_GROUP:
+            return g["mean_multiple"], g["n"], key
+    g = model["groups"][f"{outcome}/all"]
+    return g["mean_multiple"], g["n"], f"{outcome}/all"
 
 
 # ---------- 2. This share ----------
@@ -120,7 +127,7 @@ def straddle(t, spot, event_date, expiry=None, strike=None):
 
 # ---------- 4. Decision ----------
 
-def analyse(ticker, event_date, p_approve):
+def analyse(ticker, event_date, p_approve, dependence="unknown"):
     model = load_model()
     t = yf.Ticker(ticker)
     spot, vol, size = share_context(t)
@@ -128,8 +135,8 @@ def analyse(ticker, event_date, p_approve):
     if s is None:
         raise SystemExit(f"No option expiry after {event_date} for {ticker}.")
 
-    m_ap, n_ap = multiple_for(model, "approved", size)
-    m_rej, n_rej = multiple_for(model, "rejected", size)
+    m_ap, n_ap, g_ap = multiple_for(model, "approved", size, dependence)
+    m_rej, n_rej, g_rej = multiple_for(model, "rejected", size, dependence)
     event_move = (p_approve * m_ap + (1 - p_approve) * m_rej) * vol            # the decision itself
     days = max(int(np.busday_count(date.today(), datetime.strptime(s["expiry"], "%Y-%m-%d").date())), 1)
     normal_move = 0.8 * vol * math.sqrt(max(days - 1, 0))                       # ordinary wobble on the other days
@@ -145,11 +152,11 @@ def analyse(ticker, event_date, p_approve):
     except Exception:
         news = []
 
-    return {"share_price": round(spot, 4), "daily_vol_pct": round(vol * 100, 2), "size": size,
+    return {"share_price": round(spot, 4), "daily_vol_pct": round(vol * 100, 2), "size": size, "dependence": dependence,
             "expiry": s["expiry"], "strike": s["strike"], "implied_move_pct": round(implied * 100, 2),
             "expected_move_pct": round(expected * 100, 2), "ratio": round(ratio, 2), "decision": decision,
             "entry_price": round(entry, 4), "wide_spread": s["wide"],
-            "_detail": {"m_ap": m_ap, "n_ap": n_ap, "m_rej": m_rej, "n_rej": n_rej, "days": days,
+            "_detail": {"m_ap": m_ap, "n_ap": n_ap, "m_rej": m_rej, "n_rej": n_rej, "g_ap": g_ap, "g_rej": g_rej, "days": days,
                         "event_move": event_move * 100, "normal_move": normal_move * 100,
                         "straddle": s, "news": [n for n in news if n]}}
 
@@ -158,9 +165,11 @@ def explain(ticker, event_date, p, a):
     d = a["_detail"]
     print(f"\n{ticker}   FDA decision {event_date}   chance of approval used: {p:.0%}")
     print(f"  Share price {a['share_price']}   size: {a['size']}   normal daily move: {a['daily_vol_pct']}%")
+    stake = {"high": "HIGH (no other approved product: make-or-break)", "low": "LOW (already sells other drugs)"}
+    print(f"  Dependence on this drug: {stake.get(a['dependence'], 'not given (use --dependence high or low)')}")
     print("\n  WHAT HISTORY SAYS")
-    print(f"    Approved: shares like this moved {d['m_ap']}x a normal day  ({d['n_ap']} past decisions)")
-    print(f"    Rejected: shares like this moved {d['m_rej']}x a normal day  ({d['n_rej']} past decisions)")
+    print(f"    Approved: shares like this moved {d['m_ap']}x a normal day  ({d['n_ap']} past decisions, group {d['g_ap']})")
+    print(f"    Rejected: shares like this moved {d['m_rej']}x a normal day  ({d['n_rej']} past decisions, group {d['g_rej']})")
     print(f"    Expected move from the decision     {d['event_move']:.1f}%")
     print(f"    Ordinary wobble over {d['days']} trading days  {d['normal_move']:.1f}%")
     print(f"    EXPECTED MOVE                       {a['expected_move_pct']}%")
@@ -222,14 +231,17 @@ def cmd_model(a):
 
 def cmd_signal(a):
     ev = datetime.strptime(a.event_date, "%Y-%m-%d").date()
-    explain(a.ticker.upper(), a.event_date, a.p_approve, analyse(a.ticker.upper(), ev, a.p_approve))
+    explain(a.ticker.upper(), a.event_date, a.p_approve, analyse(a.ticker.upper(), ev, a.p_approve, a.dependence))
 
 
 def cmd_trade(a):
     ev = datetime.strptime(a.event_date, "%Y-%m-%d").date()
     ticker = a.ticker.upper()
-    res = analyse(ticker, ev, a.p_approve)
+    res = analyse(ticker, ev, a.p_approve, a.dependence)
     explain(ticker, a.event_date, a.p_approve, res)
+    if res["wide_spread"] and not a.force:
+        raise SystemExit("\nNot saved: the option quotes are stale or too wide to trust. Run this while the US market "
+                         "is open (14:30 to 21:00 UK time), or add --force to save anyway.")
     rows = [r for r in read_trades() if not (r["ticker"] == ticker and r["event_date"] == a.event_date)]
     rows.append({"logged_at": datetime.now().strftime("%Y-%m-%d %H:%M"), "ticker": ticker, "drug": a.drug or "",
                  "event_date": a.event_date, "p_approve": a.p_approve, "my_note": a.note or "",
@@ -273,20 +285,49 @@ def cmd_outcome(a):
         print("  No trade was taken.")
 
 
+def cmd_positions(a):
+    """Open paper positions: logged before a decision and not yet closed."""
+    df = pd.DataFrame(read_trades())
+    if df.empty or (df["actual_move_pct"] != "").all():
+        print("No open positions.")
+        return
+    pd.set_option("display.width", 200)
+    op = df[df["actual_move_pct"] == ""]
+    print("\nOPEN POSITIONS (run the outcome command after each decision)\n")
+    print(op[["ticker", "event_date", "drug", "p_approve", "dependence", "implied_move_pct", "expected_move_pct",
+              "decision", "entry_price", "expiry", "strike"]].to_string(index=False))
+
+
 def cmd_summary(a):
     df = pd.DataFrame(read_trades())
     if df.empty:
         print("No paper trades yet.")
         return
     pd.set_option("display.width", 200)
-    print(df[["ticker", "event_date", "drug", "p_approve", "implied_move_pct", "expected_move_pct", "ratio",
-              "decision", "actual_move_pct", "pnl_per_contract"]].to_string(index=False))
-    pnl = pd.to_numeric(df["pnl_per_contract"], errors="coerce").dropna()
+    cmd_positions(a)
+    done = df[df["actual_move_pct"] != ""].copy()
+    if done.empty:
+        print("\nNo decisions have happened yet, so there is nothing to score.")
+        return
+
+    # Scorecard: for each finished decision, whose forecast of the size of the move was closer?
+    for c in ["implied_move_pct", "expected_move_pct", "actual_move_pct"]:
+        done[c] = pd.to_numeric(done[c])
+    actual = done["actual_move_pct"].abs()
+    done["model_miss"] = (done["expected_move_pct"] - actual).abs().round(2)
+    done["market_miss"] = (done["implied_move_pct"] - actual).abs().round(2)
+    done["closer"] = np.where(done["model_miss"] < done["market_miss"], "MODEL", "MARKET")
+    print("\nSCORECARD: how the estimates did\n")
+    print(done[["ticker", "event_date", "outcome_note", "expected_move_pct", "implied_move_pct", "actual_move_pct",
+                "closer", "decision", "pnl_per_contract"]].to_string(index=False))
+    n = len(done)
+    print(f"\n{n} decisions scored.  Model closer: {(done['closer'] == 'MODEL').sum()}   Market closer: {(done['closer'] == 'MARKET').sum()}")
+    print(f"Average miss   model {done['model_miss'].mean():.1f} points   market {done['market_miss'].mean():.1f} points")
+    pnl = pd.to_numeric(done["pnl_per_contract"], errors="coerce").dropna()
     if len(pnl):
-        print(f"\n{len(pnl)} closed trades   total P&L ${pnl.sum():.2f}   win rate {(pnl > 0).mean():.0%}"
+        print(f"Paper trades closed: {len(pnl)}   total P&L ${pnl.sum():.2f}   win rate {(pnl > 0).mean():.0%}"
               f"   best ${pnl.max():.2f}   worst ${pnl.min():.2f}")
-    else:
-        print("\nNo closed trades yet.")
+    print("Note: both forecasts cover every day to option expiry, while the actual move is the two days around the decision.")
 
 
 def main():
@@ -299,15 +340,19 @@ def main():
         s.add_argument("ticker")
         s.add_argument("event_date", help="FDA decision date, YYYY-MM-DD")
         s.add_argument("--p-approve", type=float, default=DEFAULT_P, help="your chance of approval, 0 to 1")
+        s.add_argument("--dependence", choices=["high", "low", "unknown"], default="unknown",
+                       help="high = the company has no other approved product, low = it already sells drugs")
         s.add_argument("--drug")
         s.add_argument("--note", help="your reasoning")
+        s.add_argument("--force", action="store_true", help="save the trade even if quotes look stale")
         s.set_defaults(func=func)
     o = sub.add_parser("outcome", help="close a paper trade after the decision")
     o.add_argument("ticker")
     o.add_argument("event_date")
     o.add_argument("--note", help="what happened, e.g. approved")
     o.set_defaults(func=cmd_outcome)
-    sub.add_parser("summary", help="show all paper trades and total P&L").set_defaults(func=cmd_summary)
+    sub.add_parser("positions", help="show open paper positions").set_defaults(func=cmd_positions)
+    sub.add_parser("summary", help="open positions plus a scorecard of how the estimates did").set_defaults(func=cmd_summary)
     a = p.parse_args()
     a.func(a)
 

@@ -24,12 +24,15 @@ def fetch_approvals():
     url = "https://download.open.fda.gov/drug/drugsfda/drug-drugsfda-0001-of-0001.json.zip"
     z = zipfile.ZipFile(io.BytesIO(requests.get(url, timeout=300).content))
     data = json.loads(z.read(z.namelist()[0]))["results"]
-    out = []
+    out, every = [], []
     for app in data:
         num = app.get("application_number", "")
         if not (num.startswith("NDA") or num.startswith("BLA")):
             continue  # skip generics
         for s in app.get("submissions", []):
+            # every first approval ever, used to count how many products a company already had
+            if s.get("submission_type") == "ORIG" and s.get("submission_status") == "AP" and s.get("submission_status_date"):
+                every.append({"sponsor": app.get("sponsor_name", ""), "date": s["submission_status_date"]})
             # ORIG + AP = the first approval of this application
             if s.get("submission_type") == "ORIG" and s.get("submission_status") == "AP" and s.get("submission_status_date", "") >= START:
                 brands = sorted({p.get("brand_name", "") for p in app.get("products", [])})
@@ -41,7 +44,7 @@ def fetch_approvals():
                     "class": s.get("submission_class_code") or "",
                     "priority": s.get("review_priority") or "",
                 })
-    return out
+    return out, every
 
 
 def fetch_crls():
@@ -70,7 +73,8 @@ def fetch_crls():
 
 if __name__ == "__main__":
     os.makedirs(RAW, exist_ok=True)
-    a, c = fetch_approvals(), fetch_crls()
+    (a, every), c = fetch_approvals(), fetch_crls()
     json.dump(a, open(os.path.join(RAW, "approvals.json"), "w"), indent=1)
+    json.dump(every, open(os.path.join(RAW, "all_approvals.json"), "w"))
     json.dump(c, open(os.path.join(RAW, "crls.json"), "w"), indent=1)
     print(f"{len(a)} approvals and {len(c)} rejection letters since 2018 saved to data/raw/")
