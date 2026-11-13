@@ -1,0 +1,86 @@
+{
+ "built": "2026-11-13",
+ "events": 488,
+ "groups": {
+  "approved/small": {
+   "n": 73,
+   "mean_abs_move_pct": 13.53,
+   "median_abs_move_pct": 8.5,
+   "mean_move_pct": 4.94,
+   "mean_multiple": 2.87,
+   "median_multiple": 1.84,
+   "worst_pct": -32.75,
+   "best_pct": 79.43
+  },
+  "approved/mid": {
+   "n": 89,
+   "mean_abs_move_pct": 6.41,
+   "median_abs_move_pct": 3.69,
+   "mean_move_pct": 2.89,
+   "mean_multiple": 2.09,
+   "median_multiple": 1.28,
+   "worst_pct": -26.24,
+   "best_pct": 38.07
+  },
+  "approved/large": {
+   "n": 228,
+   "mean_abs_move_pct": 2.14,
+   "median_abs_move_pct": 1.35,
+   "mean_move_pct": 0.5,
+   "mean_multiple": 1.33,
+   "median_multiple": 0.94,
+   "worst_pct": -14.24,
+   "best_pct": 38.17
+  },
+  "approved/all": {
+   "n": 390,
+   "mean_abs_move_pct": 5.25,
+   "median_abs_move_pct": 2.14,
+   "mean_move_pct": 1.88,
+   "mean_multiple": 1.79,
+   "median_multiple": 1.1,
+   "worst_pct": -32.75,
+   "best_pct": 79.43
+  },
+  "rejected/small": {
+   "n": 39,
+   "mean_abs_move_pct": 28.47,
+   "median_abs_move_pct": 20.2,
+   "mean_move_pct": -22.6,
+   "mean_multiple": 5.93,
+   "median_multiple": 3.3,
+   "worst_pct": -76.8,
+   "best_pct": 29.75
+  },
+  "rejected/mid": {
+   "n": 33,
+   "mean_abs_move_pct": 8.46,
+   "median_abs_move_pct": 4.69,
+   "mean_move_pct": -4.37,
+   "mean_multiple": 2.61,
+   "median_multiple": 1.84,
+   "worst_pct": -43.84,
+   "best_pct": 14.69
+  },
+  "rejected/large": {
+   "n": 26,
+   "mean_abs_move_pct": 2.14,
+   "median_abs_move_pct": 1.58,
+   "mean_move_pct": -1.18,
+   "mean_multiple": 1.37,
+   "median_multiple": 1.02,
+   "worst_pct": -10.75,
+   "best_pct": 5.02
+  },
+  "rejected/all": {
+   "n": 98,
+   "mean_abs_move_pct": 14.74,
+   "median_abs_move_pct": 4.89,
+   "mean_move_pct": -10.78,
+   "mean_multiple": 3.6,
+   "median_multiple": 1.72,
+   "worst_pct": -76.8,
+   "best_pct": 29.75
+  }
+ }
+}
