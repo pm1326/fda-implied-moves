@@ -63,7 +63,7 @@ def fetch_crls():
                 "sponsor": c.get("company_name", ""),
                 "date": d,
                 "later_approved": c.get("approval_status", ""),
-                "text": (c.get("text") or "")[:6000],
+                "text": c.get("text") or "",
             })
         skip += 100
         if len(rows) < 100:

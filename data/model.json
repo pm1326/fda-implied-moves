@@ -1,6 +1,197 @@
 {
  "built": "2026-11-13",
  "events": 488,
+ "k": 8,
+ "table": {
+  "approved": [
+   390,
+   1.791230769230769
+  ],
+  "approved|large": [
+   228,
+   1.3295175438596492
+  ],
+  "approved|mid": [
+   89,
+   2.089213483146067
+  ],
+  "approved|small": [
+   73,
+   2.87
+  ],
+  "approved|large|high": [
+   3,
+   1.5033333333333332
+  ],
+  "approved|large|low": [
+   225,
+   1.3272
+  ],
+  "approved|mid|high": [
+   22,
+   2.812727272727273
+  ],
+  "approved|mid|low": [
+   67,
+   1.8516417910447762
+  ],
+  "approved|small|high": [
+   34,
+   3.344411764705882
+  ],
+  "approved|small|low": [
+   39,
+   2.4564102564102566
+  ],
+  "approved|large|high|False": [
+   3,
+   1.5033333333333332
+  ],
+  "approved|large|low|False": [
+   210,
+   1.2975238095238093
+  ],
+  "approved|large|low|True": [
+   15,
+   1.7426666666666668
+  ],
+  "approved|mid|high|False": [
+   21,
+   2.7680952380952384
+  ],
+  "approved|mid|high|True": [
+   1,
+   3.75
+  ],
+  "approved|mid|low|False": [
+   58,
+   1.5832758620689655
+  ],
+  "approved|mid|low|True": [
+   9,
+   3.5811111111111114
+  ],
+  "approved|small|high|False": [
+   27,
+   2.8014814814814817
+  ],
+  "approved|small|high|True": [
+   7,
+   5.438571428571429
+  ],
+  "approved|small|low|False": [
+   33,
+   2.52
+  ],
+  "approved|small|low|True": [
+   6,
+   2.1066666666666665
+  ],
+  "rejected": [
+   98,
+   3.5991836734693874
+  ],
+  "rejected|large": [
+   26,
+   1.3665384615384613
+  ],
+  "rejected|mid": [
+   33,
+   2.6084848484848484
+  ],
+  "rejected|small": [
+   39,
+   5.9258974358974355
+  ],
+  "rejected|large|high": [
+   1,
+   1.17
+  ],
+  "rejected|large|low": [
+   25,
+   1.3743999999999996
+  ],
+  "rejected|mid|high": [
+   8,
+   2.8012500000000005
+  ],
+  "rejected|mid|low": [
+   25,
+   2.5468
+  ],
+  "rejected|small|high": [
+   28,
+   7.2628571428571425
+  ],
+  "rejected|small|low": [
+   11,
+   2.522727272727273
+  ],
+  "rejected|large|high|other": [
+   1,
+   1.17
+  ],
+  "rejected|large|low|clinical": [
+   7,
+   1.1057142857142856
+  ],
+  "rejected|large|low|manufacturing": [
+   13,
+   1.183076923076923
+  ],
+  "rejected|large|low|other": [
+   5,
+   2.2479999999999998
+  ],
+  "rejected|mid|high|clinical": [
+   2,
+   5.58
+  ],
+  "rejected|mid|high|manufacturing": [
+   5,
+   1.64
+  ],
+  "rejected|mid|high|other": [
+   1,
+   3.05
+  ],
+  "rejected|mid|low|clinical": [
+   4,
+   2.1225
+  ],
+  "rejected|mid|low|manufacturing": [
+   18,
+   2.558888888888889
+  ],
+  "rejected|mid|low|other": [
+   3,
+   3.0399999999999996
+  ],
+  "rejected|small|high|clinical": [
+   9,
+   12.35888888888889
+  ],
+  "rejected|small|high|manufacturing": [
+   10,
+   4.577999999999999
+  ],
+  "rejected|small|high|other": [
+   9,
+   5.15
+  ],
+  "rejected|small|low|clinical": [
+   2,
+   1.345
+  ],
+  "rejected|small|low|manufacturing": [
+   6,
+   3.015
+  ],
+  "rejected|small|low|other": [
+   3,
+   2.3233333333333337
+  ]
+ },
  "groups": {
   "approved/small": {
    "n": 73,

@@ -14,5 +14,7 @@ Paper-trading research project: option-implied vs expected share moves around FD
 Use the project's Python: `.\.venv\Scripts\python.exe`. Git and gh are installed at `C:\Program Files\Git\cmd` and `C:\Program Files\GitHub CLI` and may not be on PATH.
 
 - `fetch_fda.py` then `build_history.py` rebuild data/history.csv and data/model.json.
-- `implied_move.py model | signal | trade | outcome | summary`.
+- `analysis.py` reruns the factor tests and out-of-sample backtests and rewrites results/ (analysis.md and charts). Rerun it after any model change and quote its numbers; never claim an improvement without it.
+- `model.py` holds the expected-move model (shrinkage ladder) shared by the other scripts.
+- `implied_move.py model | signal | trade | positions | outcome | summary`.
 - Option quotes are only live during US market hours (14:30 to 21:00 UK).

@@ -68,6 +68,19 @@ def ticker_for(name):
     return None
 
 
+def rejection_reason(text):
+    """Why the FDA said no, read from the section headings of its rejection letter.
+    'clinical' = doubts about whether the drug works or is safe. 'manufacturing' = problems
+    with how it is made or the factory. A letter with both counts as clinical, the more serious."""
+    heads = set(re.findall(r"^\s*(CLINICAL PHARMACOLOGY|CLINICAL|STATISTICAL|NONCLINICAL|PRODUCT QUALITY|FACILITY INSPECTIONS?|"
+                           r"MICROBIOLOGY|BIOPHARMACEUTICS|DEVICE|HUMAN FACTORS)\b", text, flags=re.M))
+    if heads & {"CLINICAL", "STATISTICAL"}:
+        return "clinical"
+    if heads & {"PRODUCT QUALITY", "FACILITY INSPECTIONS", "FACILITY INSPECTION", "MICROBIOLOGY", "DEVICE"}:
+        return "manufacturing"
+    return "other"
+
+
 def size_bucket(cap):
     if cap is None or cap != cap:
         return "unknown"
@@ -106,7 +119,9 @@ def measure(df, shares, d):
     if not vol or vol != vol:
         return None
     move = (c1 - c0) / c0
+    runup = c0 / float(before["Close"].iloc[-21]) - 1   # how far the share rose in the month before
     return {"close_before": round(c0, 4), "close_after": round(c1, 4), "move_pct": round(move * 100, 2),
+            "runup_20d_pct": round(runup * 100, 2),
             "daily_vol_pct": round(vol * 100, 2), "multiple": round(abs(move) / vol, 2),
             "size": size_bucket(c0 * shares if shares else None)}
 
@@ -116,9 +131,15 @@ def main():
     approvals = json.load(open(os.path.join(RAW, "approvals.json")))
     crls = json.load(open(os.path.join(RAW, "crls.json")))
     events = [{"date": a["date"], "sponsor": a["sponsor"], "drug": a["drug"], "outcome": "approved",
+               "application": re.sub(r"\D", "", a["application"]), "reason": "",
                "new_molecule": a["class"] == "TYPE 1", "priority_review": a["priority"] == "PRIORITY"} for a in approvals]
     events += [{"date": c["date"], "sponsor": c["sponsor"], "drug": "", "outcome": "rejected",
+                "application": c["application"], "reason": rejection_reason(c["text"]),
                 "new_molecule": "", "priority_review": ""} for c in crls]
+    # Was this same application rejected earlier? Then this decision is a second attempt.
+    rejected_on = {}
+    for c in crls:
+        rejected_on.setdefault(c["application"], []).append(c["date"])
 
     # How many products did each company already have approved? None = this decision is make-or-break.
     earlier = {}
@@ -145,13 +166,16 @@ def main():
         prior = sum(1 for d in earlier.get(t, []) if d < e["date"])
         rows.append({"date": e["date"], "ticker": t, "sponsor": e["sponsor"], "drug": e["drug"], "outcome": e["outcome"],
                      "new_molecule": e["new_molecule"], "priority_review": e["priority_review"],
+                     "reason": e["reason"],
+                     "second_attempt": any(d < e["date"] for d in rejected_on.get(e["application"], [])),
                      "prior_products": prior, "dependence": "high" if prior == 0 else "low", **m})
 
     hist = pd.DataFrame(rows)
     hist.to_csv(os.path.join(HERE, "data", "history.csv"), index=False)
 
     # The model: for each outcome and company size, how big was the move on average?
-    model = {"built": datetime.now().strftime("%Y-%m-%d"), "events": len(hist), "groups": {}}
+    import model as M
+    model = {"built": datetime.now().strftime("%Y-%m-%d"), "events": len(hist), "k": M.K, "table": M.fit(hist), "groups": {}}
     hist["abs_move"] = hist["move_pct"].abs()
     for outcome in ["approved", "rejected"]:
         for size in ["small", "mid", "large", "all", "small/high", "small/low", "mid/high", "mid/low", "all/high", "all/low"]:

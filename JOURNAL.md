@@ -141,12 +141,104 @@ This is the clearest result so far. A rejection costs a one-product small compan
 3. **Option quotes were still flagged as stale** minutes after the US market opened. Free quotes are delayed by about 15 minutes and sometimes come without a bid or ask. I need to check whether they are ever reliable for small companies.
 4. **Counting earlier products depends on my ticker table.** A company approved under a different name would be miscounted.
 
+## Version 4: testing more factors, and a proper backtest (13 November 2026)
+
+**Why.** Version 3 added one factor because one example (Capricor) looked wrong. That is not a method. I wanted to test candidate factors systematically and find out whether each version of the model was actually better than the last on data it had not seen.
+
+**New data added to each past decision**
+
+- **The FDA's reason for a rejection**, read from the section headings of its rejection letters: clinical (does the drug work, is it safe) or manufacturing (how it is made).
+- **Second attempt:** whether the same application had been rejected before.
+- **Run-up:** how far the share rose or fell in the month before.
+- New molecule and priority review were already in the data.
+
+**Factor tests** (small and mid-sized companies; full tables with confidence intervals in `results/analysis.md`)
+
+| Factor | Finding | Kept? |
+|---|---|---|
+| Reason for rejection | Clinical rejections moved the share 33.6% on average, manufacturing ones 11.7%. At one-product companies: 47.3% against 18.6%, with intervals that do not overlap. | Yes |
+| Second attempt | Approvals after an earlier rejection moved 12.6% against 9.1%. A modest effect; the intervals overlap slightly. | Yes |
+| New molecule | 9.9% against 9.3%. No difference. | No |
+| Priority review | 9.8% against 9.5%. No difference. | No |
+| Run-up before the decision | Interesting on direction: approvals after the share had already risen over 10% went on to fall 1% on average ("buy the rumour, sell the news"), while approvals after a fall rose 10%. But it barely changed the size of the move. | No, see below |
+
+I expected new molecules to matter and they did not. Two of the five ideas failed, which is about what I should expect.
+
+**The backtest.** I fitted every version of the model on decisions before 2023 only (225 of them), then had each one forecast the size of the move for the 263 decisions from 2023 onwards. Small and mid-sized companies:
+
+| Version | Average error (points) | Bias (points) | Rank correlation |
+|---|---|---|---|
+| v0: flat average | 10.79 | -5.82 | 0.28 |
+| v1: scaled by the share's normal movement | 9.78 | -2.95 | 0.57 |
+| v2: + company size | 10.69 | -0.72 | 0.55 |
+| v3: + dependence on the drug | 10.46 | -1.06 | 0.57 |
+| v4: + second attempt and reason, with shrinkage | 10.12 | +0.75 | 0.56 |
+| v5: + run-up | 10.03 | +0.79 | 0.56 |
+
+A walk-forward test (fit on all earlier years, forecast the next, 2021 to 2026) gave the same order: v1 9.85, v2 10.30, v3 10.38, v4 10.11, v5 10.10.
+
+**What this actually says, which is not what I hoped**
+
+1. **The biggest improvement was the first one.** Scaling by the share's own normal movement took the rank correlation from 0.28 to 0.57. Nothing after that improved it.
+2. **My later factors did not reduce the average error.** Versions 2 and 3 were slightly worse than version 1 on error. I had assumed version 3 was a clear step forward. On unseen data it was not.
+3. **What the factors did fix is the bias.** Version 1 under-forecast moves by about 3 points on average. Versions 2 to 4 brought that close to zero. For pricing a straddle, the average level is what matters, so this is a real gain, but a narrower one than I had claimed.
+4. **Most of the move is unpredictable.** An average error of 10 points on moves that average about 12 is large. Knowing the outcome, size, dependence and reason still leaves most of the variation unexplained.
+5. **Run-up was not adopted.** Version 5 was better than version 4 by 0.09 points, well inside the noise, and worse on rank correlation. An extra factor has to earn its place.
+
+I adopted **version 4**: the lowest error of the unbiased versions, and its factors have a clear reason behind them.
+
+**A technical change: shrinkage.** Versions 2 and 3 ignored any group with fewer than 20 past decisions and fell back to a wider group. That throws away real information and makes the forecast jump when a group reaches 20. Version 4 blends each group's average with the wider group's, weighted by how many examples it has. The code is in `model.py`.
+
+**What selling a straddle would have looked like.** If options had been priced exactly at the historical average for one-product companies that were rejected, a seller would have won 58% of the time, gaining about 19 points, and lost 42% of the time, losing about 26 points, with a worst case of 47. Winning more often than losing tells you nothing about whether a strategy makes money.
+
+## Version 5: more than one way to judge the price (13 November 2026)
+
+**The problem.** Everything so far compared the option price with one number: the historical average. One measure is fragile. I wanted several measures that could disagree with each other.
+
+**The measures**
+
+| | Measure | What it asks | Source |
+|---|---|---|---|
+| A | Average | Is the implied move bigger than the average move on similar past decisions? | History |
+| B | Distribution | In what share of similar past decisions was the move bigger than the options need? | History, but the whole spread, not just the average |
+| C | Term structure | Options expiring before the decision show what the market charges for ordinary days. Subtract that from options expiring after it and what is left is the price of the decision. | The options market itself |
+| D | Implied odds | What chance of approval would make history agree with the option price? | History, turned into a probability to compare with my own view |
+| Guard | Out of range | Is the implied move beyond 95% of similar past decisions? | History |
+
+**The rule.** Trade only if at least two of A, B and C say the same thing and none says the opposite. D is shown but does not vote, because it reuses A's inputs. If the guard triggers, no trade whatever the others say.
+
+**Why the guard.** I checked Capricor's raw option quotes to see whether the 98% implied move was a data error. It was not. The options were trading at implied volatility above 600%. The market really is pricing a move of about 100%, bigger than 95% of similar past decisions. When the market is that far outside the history, the right conclusion is that the market knows something the history does not, such as the 9 to 3 panel vote against the drug. The model has no basis to disagree, so it now says so and stands aside.
+
+**Re-run on the four decisions**
+
+| Company | Expected move | Implied move | A | B | Verdict | Was |
+|---|---|---|---|---|---|---|
+| Capricor | 63% | 97% | Expensive | Expensive | No trade (out of range) | Sell |
+| Savara | 18% | 45% | Expensive | Expensive | Sell | Sell |
+| BridgeBio | 10% | 12% | Fair | Expensive | No trade | No trade |
+| Cogent | 14% | 18% | Expensive | Fair | No trade | Sell |
+
+Capricor's expected move rose from 49% to 63% once the model knew it was a second attempt with a clinical risk. Two of the three earlier "sell" calls are gone.
+
+**Problems found**
+
+1. **Measure C has not worked once.** It needs tight quotes on two expiries, and every small biotech I tried had spreads too wide. It may only be usable on larger companies or with paid data.
+2. **Capricor's options expiring before the decision were also very expensive.** The market seems to be pricing a chance of early news. So "the decision date" is fuzzier than I assumed, and measure C would have been misleading there even with good quotes. The tool now detects this and says the decision cannot be isolated.
+3. **Measure D said "no chance of approval makes history match this price" for all four.** Options were dearer than history at any odds, every time. Four out of four in one direction suggests a systematic gap, not four mispricings. Likely causes: options normally cost more than past movement justifies (sellers demand a premium for the risk in the table above); my history is missing the acquired and delisted companies, which include the most extreme moves; and I measure the move over two days while options cover weeks. **Until the scorecard shows otherwise, an "expensive" reading on its own is weak evidence.**
+4. **Measures A, B and D all lean on the same history.** They are different views of it, not independent sources. Only C is truly separate, and C does not work yet.
+5. **Some groups are tiny.** Cogent's rejection estimate rests on 2 past clinical rejections at mid-sized one-product companies, pulled towards the wider average by shrinkage.
+6. **The reason for a rejection is only known afterwards.** Before a decision I have to guess the most likely reason. The backtest assumed that guess was right, which flatters version 4.
+
 ## Improvements identified
 
 1. ~~Add a measure of dependence on the drug.~~ Done in version 3. Next: refine it with whether the drug was rejected before and whether an advisory panel voted, since those are what made Capricor extreme.
-2. **Separate first approvals from follow-ons.** The data already flags new molecules and priority reviews. A new use for an existing drug matters far less.
-3. **Only save trades during US market hours**, and refuse when quotes are stale.
-4. **Record the worst case, not just the average.** Report the largest single loss beside the win rate.
+2. ~~Separate first approvals from follow-ons.~~ Tested in version 4. New molecule and priority review made no difference, so they were left out.
+3. ~~Only save trades during US market hours, and refuse when quotes are stale.~~ Done in version 3.
+4. ~~Record the worst case, not just the average.~~ Done in version 4's seller's risk table.
+9. **Measure the systematic gap between option prices and history**, using the scorecard as trades close, and raise the "expensive" threshold to match.
+10. **Advisory panel votes.** Capricor showed these matter a great deal. They would have to be collected by hand or with an AI model reading FDA meeting records.
+11. **Use the run-up for direction, not size.** It did not help forecast the size of the move, but approvals after a big rise tended to fall. That could matter for a different kind of trade.
+12. **Make measure C work**, on larger companies or with better quotes.
 5. **Look for historical option prices.** Imperial's library may give access to a research database with them, which would allow a proper backtest.
 6. **Recover the missing companies** with a paid or academic price source, to reduce survivorship bias.
 7. **Use an AI model to read the FDA's rejection letters** and classify the reason (manufacturing, safety, effectiveness). The letter text is already downloaded.
@@ -159,6 +251,10 @@ This is the clearest result so far. A rejection costs a one-product small compan
 - Official primary sources beat a hand-made list.
 - An average can be badly wrong for a single case. The interesting work is in finding what separates the cases.
 - A model disagreeing with the market is usually a reason to doubt the model first.
+- Test on data the model has not seen. Version 3 felt like a clear improvement and the backtest showed it was not, on the measure I first chose.
+- Report what failed. Two of five factor ideas did nothing, and one of my four pricing measures has never produced a reading.
+- A model should know when it does not know. The out-of-range guard is the most useful thing I have added.
+- Winning more often than losing says nothing about profit when the losses are bigger than the wins.
 
 ## Log
 
@@ -170,3 +266,5 @@ This is the clearest result so far. A rejection costs a one-product small compan
 | 13 Nov 2026 | First run on four upcoming decisions. Found the single-drug dependence weakness. |
 | 13 Nov 2026 | Version 3: dependence measure, positions, scorecard, stale-quote guard. Researched what is at stake for the four decisions. |
 | 13 Nov 2026 | Reminder set for 20 Nov, the last trading day before the Capricor and Savara decisions. |
+| 13 Nov 2026 | Version 4: tested five more factors, kept two. Out-of-sample and walk-forward backtests of every model version. Shrinkage replaced the 20-example cut-off. |
+| 13 Nov 2026 | Version 5: four ways of judging the option price, a two-vote rule, and an out-of-range guard. Capricor and Cogent changed from sell to no trade. |
