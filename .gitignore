@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 tracker.html
 data/raw/
+private/
