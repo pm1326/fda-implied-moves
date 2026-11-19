@@ -81,8 +81,8 @@ Average error is how far the forecast was from the actual move, in percentage po
 | v2 + company size                                |                 6.23 |           -0.01 |              0.573 |
 | v3 + dependence on the drug                      |                 6.12 |           -0.17 |              0.578 |
 | v3b same factors, shrinkage instead of a cut-off |                 6.02 |            0.75 |              0.578 |
-| v4 + second attempt, reason for rejection        |                 5.81 |            0.57 |              0.571 |
-| v5 + share price run-up beforehand               |                 5.78 |            0.57 |              0.563 |
+| v4 + second attempt, reason for rejection        |                 5.76 |            0.52 |              0.573 |
+| v5 + share price run-up beforehand               |                 5.75 |            0.57 |              0.57  |
 
 **Small and mid-sized companies only**
 
@@ -93,8 +93,8 @@ Average error is how far the forecast was from the actual move, in percentage po
 | v2 + company size                                |                10.69 |           -0.72 |              0.552 |
 | v3 + dependence on the drug                      |                10.46 |           -1.06 |              0.569 |
 | v3b same factors, shrinkage instead of a cut-off |                10.53 |            1.12 |              0.566 |
-| v4 + second attempt, reason for rejection        |                10.12 |            0.75 |              0.56  |
-| v5 + share price run-up beforehand               |                10.03 |            0.79 |              0.558 |
+| v4 + second attempt, reason for rejection        |                10.02 |            0.65 |              0.565 |
+| v5 + share price run-up beforehand               |                 9.99 |            0.76 |              0.563 |
 
 ## 3. Walk-forward test
 
@@ -106,9 +106,9 @@ For each year, the model is fitted only on earlier years and then forecasts that
 | v1 scaled by the share's normal movement         |   9.06 |  11.24 |  10.56 |   5.79 |  12.07 |   9.46 |        9.85 |
 | v2 + company size                                |   9.4  |  10.96 |  11.27 |   7.68 |  12.04 |   9.51 |       10.3  |
 | v3 + dependence on the drug                      |   9.4  |  11.11 |  11.04 |   7.35 |  12.7  |   9.47 |       10.38 |
-| v3b same factors, shrinkage instead of a cut-off |   9.14 |  12    |  11.07 |   7.53 |  12.34 |  10.15 |       10.51 |
-| v4 + second attempt, reason for rejection        |   9.12 |  11.59 |  10.47 |   8.23 |  11.32 |   9.47 |       10.11 |
-| v5 + share price run-up beforehand               |   9.29 |  11.74 |  10.56 |   8.22 |  10.89 |   9.71 |       10.1  |
+| v3b same factors, shrinkage instead of a cut-off |   9.13 |  12    |  11.07 |   7.53 |  12.34 |  10.15 |       10.51 |
+| v4 + second attempt, reason for rejection        |   9.09 |  11.36 |  10.53 |   7.98 |  11.32 |   9.47 |       10.05 |
+| v5 + share price run-up beforehand               |   9.31 |  11.61 |  10.59 |   8.12 |  10.89 |   9.65 |       10.06 |
 
 ## 4. What selling a straddle would have looked like
 

@@ -229,6 +229,39 @@ Capricor's expected move rose from 49% to 63% once the model knew it was a secon
 5. **Some groups are tiny.** Cogent's rejection estimate rests on 2 past clinical rejections at mid-sized one-product companies, pulled towards the wider average by shrinkage.
 6. **The reason for a rejection is only known afterwards.** Before a decision I have to guess the most likely reason. The backtest assumed that guess was right, which flatters version 4.
 
+## Health check and automated tests (19 November 2026)
+
+**Why.** Before logging the first real paper trades, I wanted proof that every part works, not just that it runs without an error.
+
+**What I added.** 27 automated tests in `tests/test_core.py`. They use a made-up share and option chain, so they run offline, at any time, and give the same answer every time. They check:
+
+- option prices: midpoints, spreads and picking the strike nearest the share price
+- the model: that shrinkage blends groups by exactly the right amounts
+- the history: reading the FDA's rejection reasons, matching companies to tickers, measuring moves across the decision day, and rejecting gaps in price data
+- the signal: across seven different option prices, the verdict always follows the voting rule; cheap options lead to a buy, dear ones to a sell, and extreme ones trigger the guard
+- paper trades from start to finish: stale quotes are refused, a trade and its outcome give the right profit or loss, and logging a decision twice replaces the first entry
+
+**What the tests found**
+
+1. **A real flaw in the model: counting the same evidence twice.** When a more specific group contained exactly the same past decisions as the group above it (for example, the only 2 clinical rejections at mid-sized one-product companies are also the only 2 rejections at that level), the model blended them in again, pulling the estimate further towards a tiny sample. Now a group that adds no new decisions is skipped. Rerunning the backtest on the same data, version 4 improved slightly:
+
+   | | Average error | Bias | Rank correlation |
+   |---|---|---|---|
+   | Version 4 before the fix | 10.12 | +0.75 | 0.560 |
+   | Version 4 after the fix | 10.02 | +0.65 | 0.565 |
+
+   Walk-forward error for version 4 went from 10.11 to 10.05. Version 5 (with run-up) is now 9.99 against version 4's 10.02, still too small a gap to justify the extra factor.
+
+2. **A crash that would have stopped tomorrow's trades.** A Savara news headline contained a non-breaking hyphen, which a Windows terminal cannot display. Printing it crashed the program after the analysis but before the trade was saved. The program now replaces characters it cannot show. A test reproduces the exact headline.
+
+3. **One of my tests was wrong, not the code.** I expected the actual move to equal the jump on the day after the decision, but the tool deliberately measures across the decision day as well, to catch news released at any time. The test now matches the design.
+
+**Other checks**
+
+- A fresh download from the FDA added two older approvals it had backfilled (Sanofi in 2020, Teva in 2022, both large companies), and Yahoo had slightly revised some past prices. I kept the 488-decision snapshot so the published numbers stay consistent; the next full rebuild will include them.
+- All commands ran on live data for the four upcoming decisions. Cogent's verdict changed from no trade to sell because its implied move rose from 18% to 23% since 13 November. Capricor's implied move rose to 113%, and the guard still holds it at no trade.
+- The market was closed during the check, so quotes were flagged as stale, as expected.
+
 ## Improvements identified
 
 1. ~~Add a measure of dependence on the drug.~~ Done in version 3. Next: refine it with whether the drug was rejected before and whether an advisory panel voted, since those are what made Capricor extreme.
@@ -268,3 +301,4 @@ Capricor's expected move rose from 49% to 63% once the model knew it was a secon
 | 13 Nov 2026 | Reminder set for 20 Nov, the last trading day before the Capricor and Savara decisions. |
 | 13 Nov 2026 | Version 4: tested five more factors, kept two. Out-of-sample and walk-forward backtests of every model version. Shrinkage replaced the 20-example cut-off. |
 | 13 Nov 2026 | Version 5: four ways of judging the option price, a two-vote rule, and an out-of-range guard. Capricor and Cogent changed from sell to no trade. |
+| 19 Nov 2026 | Health check: 27 automated tests. Fixed double-counting in the model and a headline crash that would have blocked the Savara trade. |

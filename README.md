@@ -64,8 +64,8 @@ Each move is also stored as a **multiple** of the share's normal daily movement 
 | v1: scaled by the share's normal movement | 9.78 | -2.95 | 0.57 |
 | v2: + company size | 10.69 | -0.72 | 0.55 |
 | v3: + dependence on the drug | 10.46 | -1.06 | 0.57 |
-| **v4: + second attempt and reason, with shrinkage** | 10.12 | +0.75 | 0.56 |
-| v5: + run-up before the decision | 10.03 | +0.79 | 0.56 |
+| **v4: + second attempt and reason, with shrinkage** | 10.02 | +0.65 | 0.57 |
+| v5: + run-up before the decision | 9.99 | +0.76 | 0.56 |
 
 Scaling by the share's own movement was the one large gain. The later factors removed the bias, which matters for pricing a straddle, but did not reduce the average error. Version 4 is in use. New molecule, priority review and run-up were tested and left out. Full tables, a walk-forward test and confidence intervals are in [results/analysis.md](results/analysis.md), and the reasoning is in [JOURNAL.md](JOURNAL.md).
 
@@ -87,6 +87,7 @@ python fetch_fda.py        # download FDA decisions
 python build_history.py    # measure past moves and build the model
 
 python analysis.py         # factor tests, backtests and charts
+python -m pytest -q        # 27 automated tests, offline
 
 python implied_move.py model
 python implied_move.py signal  TICKER 2026-12-15 --p-approve 0.7 --dependence high --second-attempt --risk clinical

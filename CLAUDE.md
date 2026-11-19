@@ -15,6 +15,7 @@ Use the project's Python: `.\.venv\Scripts\python.exe`. Git and gh are installed
 
 - `fetch_fda.py` then `build_history.py` rebuild data/history.csv and data/model.json.
 - `analysis.py` reruns the factor tests and out-of-sample backtests and rewrites results/ (analysis.md and charts). Rerun it after any model change and quote its numbers; never claim an improvement without it.
+- `.\.venv\Scripts\python.exe -m pytest -q` runs the offline tests in tests/. Run them after any code change; add a test for every bug fixed.
 - `model.py` holds the expected-move model (shrinkage ladder) shared by the other scripts.
 - `implied_move.py model | signal | trade | positions | outcome | summary`.
 - Option quotes are only live during US market hours (14:30 to 21:00 UK).

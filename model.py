@@ -53,6 +53,9 @@ def predict(table, outcome, features, levels=LEVELS, k=K):
         g = table.get(_key(outcome, vals))
         if g is None:
             break
+        used = _key(outcome, vals).replace("|", " / ")
+        if g[0] == used_n:
+            continue  # exactly the same decisions as the rung above: no new information, so do not count them again
         est = (g[0] * g[1] + k * est) / (g[0] + k)
-        used, used_n = _key(outcome, vals).replace("|", " / "), g[0]
+        used_n = g[0]
     return est, used_n, used

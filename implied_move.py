@@ -40,6 +40,7 @@ import csv
 import json
 import math
 import os
+import sys
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -418,7 +419,17 @@ def cmd_summary(a):
     print("Note: both forecasts cover every day to option expiry, while the actual move is the two days around the decision.")
 
 
+def safe_output():
+    """Windows terminals often cannot show every character used in news headlines (for example a
+    non-breaking hyphen). Without this, printing one crashes the program before a trade is saved."""
+    try:
+        sys.stdout.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
+
 def main():
+    safe_output()
     p = argparse.ArgumentParser(description="Paper trading option-implied vs expected moves around FDA decisions")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("model", help="show what history says").set_defaults(func=cmd_model)
